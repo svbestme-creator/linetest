@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>活動報名</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root {
+    --bg: #f4f6f5; --card: #ffffff; --text: #1d2321; --muted: #6b7470; --line: #e2e6e4;
+    --accent: #06c755; --accent-ink: #ffffff; --disabled: #c8cdcb; --danger: #d93a3a; --soft: #eaf8f0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121514; --card: #1c201f; --text: #e9eeec; --muted: #9aa39f; --line: #2c3230;
+      --disabled: #4a504e; --soft: #17301f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 16px 16px 40px; }
+  .state { text-align: center; padding: 80px 0; color: var(--muted); }
+  .hero h1 { font-size: 22px; margin: 8px 0 6px; }
+  .hero p { margin: 0 0 4px; white-space: pre-line; color: var(--muted); }
+  .who { font-size: 14px; color: var(--muted); margin: 12px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px; margin: 0 0 14px; }
+  fieldset.card { min-width: 0; }
+  legend, .card h2 { font-weight: 700; font-size: 16px; padding: 0; margin: 0 0 10px; }
+  .card h2 { margin-top: 0; }
+  .session { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line);
+    border-radius: 10px; margin-bottom: 8px; cursor: pointer; }
+  .session:last-child { margin-bottom: 0; }
+  .session input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+  .session .t { font-weight: 600; }
+  .session small { display: block; color: var(--muted); font-size: 13px; }
+  .session.full { opacity: .55; cursor: not-allowed; background: var(--bg); }
+  .session.full .t { text-decoration: line-through; }
+  .session:has(input:checked) { border-color: var(--accent); background: var(--soft); }
+  label.f { display: block; font-size: 14px; color: var(--muted); margin: 10px 0 4px; }
+  label.f:first-of-type { margin-top: 0; }
+  input[type=text], input[type=tel], input[type=email], select {
+    width: 100%; font: inherit; color: var(--text); background: var(--card);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .meal { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .seg label { padding: 8px 18px; cursor: pointer; }
+  .seg input { display: none; }
+  .seg label:has(input:checked) { background: var(--accent); color: var(--accent-ink); }
+  .hint { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+  .notice ol { margin: 0; padding-left: 20px; font-size: 14px; }
+  .notice li { margin-bottom: 6px; }
+  .check { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; font-weight: 600; }
+  .check input { width: 20px; height: 20px; accent-color: var(--accent); margin-top: 2px; flex: none; }
+  .error { color: var(--danger); font-size: 14px; margin: 0 0 12px; }
+  button { width: 100%; font: inherit; font-weight: 700; padding: 14px; border: 0; border-radius: 12px;
+    background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+  button:disabled { background: var(--disabled); cursor: wait; }
+  .done { text-align: center; }
+  .done .icon { font-size: 48px; }
+  dl { text-align: left; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 16px 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; word-break: break-all; }
+</style>
+</head>
+<body>
+<main>
+  <div id="loading" class="state">載入中…</div>
+
+  <section id="errorView" class="state" hidden></section>
+
+  <section id="formView" hidden>
+    <header class="hero">
+      <h1 id="evName"></h1>
+      <p id="evDesc"></p>
+      <p id="evLoc"></p>
+    </header>
+    <div class="who">以 LINE「<b id="lineName"></b>」身分報名</div>
+
+    <form id="form" novalidate>
+      <fieldset class="card">
+        <legend>選擇場次</legend>
+        <div id="sessions"></div>
+      </fieldset>
+
+      <fieldset class="card">
+        <legend>基本資料</legend>
+        <label class="f" for="name">姓名</label>
+        <input type="text" id="name" maxlength="30" autocomplete="name" required>
+        <label class="f" for="phone">電話</label>
+        <input type="tel" id="phone" maxlength="12" inputmode="tel" placeholder="0912345678" autocomplete="tel" required>
+        <label class="f" for="email">Email</label>
+        <input type="email" id="email" maxlength="100" autocomplete="email" required>
+        <label class="f" for="people">人數（含本人）</label>
+        <select id="people"></select>
+        <p class="hint" id="peopleHint" hidden></p>
+        <div id="meals"></div>
+      </fieldset>
+
+      <section class="card notice">
+        <h2>注意事項</h2>
+        <ol id="notices"></ol>
+        <label class="check"><input type="checkbox" id="agree"> 我已閱讀並同意以上注意事項</label>
+      </section>
+
+      <p id="formError" class="error" hidden></p>
+      <button type="submit" id="submitBtn">送出報名</button>
+    </form>
+  </section>
+
+  <section id="doneView" class="card done" hidden>
+    <div class="icon">✅</div>
+    <h1 id="doneTitle" style="font-size:20px;margin:6px 0"></h1>
+    <p id="doneSub" class="hint"></p>
+    <dl id="doneList"></dl>
+    <button type="button" id="closeBtn" hidden>關閉</button>
+  </section>
+</main>
+
+<script>
+/* ===== 請填入這兩個值 ===== */
+const LIFF_ID = '2012011271-2Ye0I4j5';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyNKCAI78xWibUqiMu4htREn0H6wUcd7UQflgD7VAS1vBp5O9Z_-ZPHCHbIFnEOmHw/exec';
+/* ========================== */
+
+const $ = (id) => document.getElementById(id);
+let info = null;
+
+async function api(payload) {
+  const idToken = liff.getIDToken();
+  if (!idToken) throw new Error('無法取得 ID Token，請確認 LIFF 已勾選 openid 權限');
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ idToken }, payload)),
+  });
+  return res.json();
+}
+
+function show(id) {
+  ['loading', 'errorView', 'formView', 'doneView'].forEach((v) => { $(v).hidden = v !== id; });
+}
+
+function showError(msg) {
+  $('errorView').textContent = msg;
+  show('errorView');
+}
+
+async function main() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+    const profile = await liff.getProfile();
+    $('lineName').textContent = profile.displayName;
+    await loadInfo(true);
+  } catch (e) {
+    console.error(e);
+    showError('頁面載入失敗，請關閉後從 LINE 重新開啟。');
+  }
+}
+
+async function loadInfo(firstTime) {
+  const r = await api({ action: 'info' });
+  if (!r.ok) return showError(r.message);
+  info = r;
+  if (r.myRegistration) return showDone(r.myRegistration, true);
+  if (firstTime) renderStatic();
+  renderSessions();
+  show('formView');
+}
+
+function renderStatic() {
+  const ev = info.event;
+  document.title = ev.name;
+  $('evName').textContent = ev.name;
+  $('evDesc').textContent = ev.description;
+  $('evLoc').textContent = ev.location ? '📍 ' + ev.location : '';
+
+  const sel = $('people');
+  sel.innerHTML = '';
+  for (let i = 1; i <= ev.maxPeople; i++) {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = i + ' 位';
+    sel.appendChild(o);
+  }
+  sel.addEventListener('change', renderMeals);
+  renderMeals();
+
+  const ol = $('notices');
+  info.notices.forEach((n) => { const li = document.createElement('li'); li.textContent = n; ol.appendChild(li); });
+
+  $('form').addEventListener('submit', onSubmit);
+}
+
+function renderSessions() {
+  const box = $('sessions');
+  const prev = selectedSessionId();
+  box.innerHTML = '';
+  info.sessions.forEach((s) => {
+    const full = s.remaining <= 0;
+    const lab = document.createElement('label');
+    lab.className = 'session' + (full ? ' full' : '');
+    const input = document.createElement('input');
+    input.type = 'radio'; input.name = 'session'; input.value = s.id; input.disabled = full;
+    if (prev === s.id && !full) input.checked = true;
+    input.addEventListener('change', updatePeopleLimit);
+    const text = document.createElement('div');
+    const t = document.createElement('div'); t.className = 't'; t.textContent = s.label;
+    const small = document.createElement('small');
+    small.textContent = full ? '已額滿' : '剩餘 ' + s.remaining + ' 位';
+    text.append(t, small);
+    lab.append(input, text);
+    box.appendChild(lab);
+  });
+  updatePeopleLimit();
+}
+
+function selectedSessionId() {
+  const c = document.querySelector('input[name=session]:checked');
+  return c ? c.value : null;
+}
+
+/* 選到的場次若剩餘名額不足，鎖住較多人數的選項 */
+function updatePeopleLimit() {
+  const s = info.sessions.find((x) => x.id === selectedSessionId());
+  const limit = s ? Math.min(s.remaining, info.event.maxPeople) : info.event.maxPeople;
+  const sel = $('people');
+  [...sel.options].forEach((o) => { o.disabled = Number(o.value) > limit; });
+  if (Number(sel.value) > limit) { sel.value = String(limit); renderMeals(); }
+  const hint = $('peopleHint');
+  hint.hidden = limit >= info.event.maxPeople;
+  hint.textContent = '此場次僅剩 ' + limit + ' 位，最多可報名 ' + limit + ' 位。';
+}
+
+function renderMeals() {
+  const n = Number($('people').value);
+  const box = $('meals');
+  const prev = [...box.querySelectorAll('input:checked')].reduce((m, i) => (m[i.name] = i.value, m), {});
+  box.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const row = document.createElement('div'); row.className = 'meal';
+    const who = document.createElement('span'); who.textContent = (i === 0 ? '本人' : '同行者') + '餐點';
+    const seg = document.createElement('div'); seg.className = 'seg';
+    ['葷', '素'].forEach((m) => {
+      const l = document.createElement('label');
+      const r = document.createElement('input');
+      r.type = 'radio'; r.name = 'meal' + i; r.value = m;
+      if (prev['meal' + i] === m) r.checked = true;
+      l.append(r, document.createTextNode(m));
+      seg.appendChild(l);
+    });
+    row.append(who, seg);
+    box.appendChild(row);
+  }
+}
+
+function formError(msg) {
+  const p = $('formError');
+  p.textContent = msg || '';
+  p.hidden = !msg;
+  if (msg) p.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function onSubmit(e) {
+  e.preventDefault();
+  const people = Number($('people').value);
+  const meals = [];
+  for (let i = 0; i < people; i++) {
+    const c = document.querySelector('input[name=meal' + i + ']:checked');
+    meals.push(c ? c.value : null);
+  }
+  const data = {
+    action: 'register',
+    sessionId: selectedSessionId(),
+    name: $('name').value.trim(),
+    phone: $('phone').value.replace(/[\s-]/g, ''),
+    email: $('email').value.trim(),
+    people, meals,
+    agree: $('agree').checked,
+  };
+
+  if (!data.sessionId) return formError('請選擇場次');
+  if (!data.name) return formError('請填寫姓名');
+  if (!/^0\d{8,9}$/.test(data.phone)) return formError('電話格式不正確（例：0912345678）');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return formError('Email 格式不正確');
+  if (meals.includes(null)) return formError('請選擇每位參加者的葷素');
+  if (!data.agree) return formError('請勾選同意注意事項');
+  formError('');
+
+  const btn = $('submitBtn');
+  btn.disabled = true; btn.textContent = '送出中…';
+  try {
+    const r = await api(data);
+    if (r.ok) return showDone(r.registration, false, r.pushed);
+    formError(r.message);
+    if (r.code === 'FULL') await loadInfo(false);
+    if (r.code === 'DUPLICATE') await loadInfo(false);
+  } catch (err) {
+    console.error(err);
+    formError('送出失敗，請檢查網路後再試一次。');
+  } finally {
+    btn.disabled = false; btn.textContent = '送出報名';
+  }
+}
+
+function showDone(reg, already, pushed) {
+  $('doneTitle').textContent = already ? '您已完成報名' : '報名成功';
+  $('doneSub').textContent = already
+    ? '每個 LINE 帳號限報名一個場次，以下是您的報名資料。'
+    : (pushed ? '確認訊息已傳送到您的 LINE，活動前一天也會再提醒您。' : '活動前一天會透過 LINE 提醒您。');
+  const dl = $('doneList');
+  dl.innerHTML = '';
+  [['場次', reg.session], ['姓名', reg.name], ['電話', reg.phone], ['Email', reg.email],
+   ['人數', reg.people + ' 位'], ['餐點', reg.meals]].forEach(([k, v]) => {
+    const dt = document.createElement('dt'); dt.textContent = k;
+    const dd = document.createElement('dd'); dd.textContent = v;
+    dl.append(dt, dd);
+  });
+  if (liff.isInClient()) {
+    const b = $('closeBtn'); b.hidden = false; b.onclick = () => liff.closeWindow();
+  }
+  show('doneView');
+}
+
+main();
+</script>
+</body>
+</html>
